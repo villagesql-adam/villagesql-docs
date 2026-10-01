@@ -71,6 +71,25 @@ The build instructions are in the
 | `vsql_duckdb.max_result_bytes` | `1048576` | The size ceiling on a returned result |
 | `vsql_duckdb.temp_directory` | empty | Where it spills to disk when a query outgrows memory, which happens only while `allow_local_files` is on |
 
+`SHOW STATUS LIKE 'vsql_duckdb%'` reports two counters, which persist for
+the life of the server process:
+
+```
++----------------------------+-------+
+| Variable_name              | Value |
++----------------------------+-------+
+| vsql_duckdb.queries_failed | 0     |
+| vsql_duckdb.queries_total  | 0     |
++----------------------------+-------+
+```
+
+`queries_total` counts a `duckdb_query()` or `duckdb_scalar()` call that
+ran, whether it succeeded or raised an error — a `duckdb_scalar()` call
+that returns `NULL`, for an empty result or for a NULL value, counts as a
+success. A call whose `sql` argument is itself `NULL` returns `NULL`
+without incrementing either counter. `queries_failed` counts only the
+calls that raised an error, and is included in `queries_total`.
+
 ## Example
 
 Ask it what it is:
