@@ -165,6 +165,7 @@ No. If the API call fails, it returns NULL. Run `SHOW WARNINGS` to see why — `
 |:---|:---|
 | `FUNCTION <database>.ai_prompt does not exist` | Run `INSTALL EXTENSION vsql_ai` |
 | Returns NULL | Bad API key, rate limit hit, or timeout — check `max_execution_time` |
+| Response stops mid-sentence | Run `SHOW WARNINGS` — a "Prompt response truncated to fit the result buffer" warning means the answer did not fit in the result; ask the model for a shorter answer |
 | UPDATE runs too long | Use smaller `LIMIT` batches; `max_execution_time` does not apply to `UPDATE`, use `KILL QUERY <connection_id>` from another session instead |
 | Model returns unexpected format | Tighten the prompt: specify exact output format and give examples |
 | Rate limit errors | Reduce batch size; add `SELECT SLEEP(1);` between UPDATE batches, or add a sleep in your application loop |
