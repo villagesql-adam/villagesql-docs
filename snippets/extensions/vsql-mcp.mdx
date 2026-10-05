@@ -63,8 +63,13 @@ SELECT CONVERT(info() USING utf8mb4) AS info;
 ```
 
 ```
-{"enabled":false,"http_port":0,"https_port":0,"port":3100,"protocol_version":"2025-06-18","schema":"","sessions_active":0,"ssl_port":3143}
+{"enabled":false,"http_port":0,"https_port":0,"port":3100,"protocol_version":"2025-06-18","schema":"","sessions_active":0,"ssl_port":3143,"starting":false}
 ```
+
+`starting` is `true` from the moment `vsql_mcp.vsql_mcp_enabled` is set `ON`
+until the background worker's next wakeup, which comes every 25 ms. A call in
+that window can report `"enabled":false` too, since the listener has not bound
+yet.
 
 | Setting | Default | What it controls |
 |---|---|---|

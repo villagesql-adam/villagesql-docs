@@ -136,7 +136,7 @@ curl -i -X POST http://127.0.0.1:3100/mcp \
 HTTP/1.1 200 OK
 Mcp-Session-Id: f5330e8b88f9c5ffed95fdfdc2b42606
 
-{"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{},"tools":{}},"protocolVersion":"2025-06-18","serverInfo":{"name":"vsql_mcp","version":"0.0.6"}}}
+{"id":1,"jsonrpc":"2.0","result":{"capabilities":{"resources":{},"tools":{}},"protocolVersion":"2025-06-18","serverInfo":{"name":"vsql_mcp","version":"0.0.7"}}}
 ```
 
 Every following request on this connection needs that session ID. Omitting it fails with a JSON-RPC error, not a silent default:
