@@ -376,6 +376,181 @@ void ba_concat_all(VarArgs args, StringResult out) {
 //     .build()
 ```
 
+## Deciding a Function's Type Parameters at Resolution Time
+
+The server's built-in rules usually work out a return type's parameters from
+its arguments' declared types. Sometimes they can't. For example,
+`tvector_concat(TVECTOR(M), TVECTOR(N))` returns a `TVECTOR(M+N)`. The
+built-in rules reject two `TVECTOR` arguments whose dimensions differ, and
+they can copy an argument's parameters to the return type but never add them.
+For cases like this, register a **bind-and-check-types hook** with
+`.bind_and_check_types<&Hook>()` on the func builder, with the signature:
+
+```cpp
+void my_hook(vsql::BindArgs args, vsql::BindResult out);
+```
+
+`.bind_and_check_types()` and `.varargs()` are mutually exclusive on the same
+function — a varargs VDF has no fixed argument list for the hook to reason
+about. Declaring `.varargs()` before `.bind_and_check_types<&Hook>()` in the
+builder chain is a compile-time `static_assert` failure. Declaring them in
+the other order compiles, but the extension is rejected when the server loads
+it: registration walks every function's final built state and rejects the
+first one that is both varargs and has a bind hook, with:
+
+```text
+VDF '%s' declares both .varargs() and .bind_and_check_types(). This is not currently supported.
+```
+
+<Warning>
+`.bind_and_check_types<&Hook>()` and `<villagesql/vsql/bind_check_types.h>`
+are declared only in the opt-in dev ABI headers (`-DVSQL_USE_DEV_ABI=ON`) and
+require VEF Protocol 4. A default stable-ABI build has neither, so
+registering a hook fails to compile.
+</Warning>
+
+The server calls the hook between two passes it makes over a function's
+arguments: the first pass checks each argument's base type, the hook runs
+next, and the second pass applies the hook's answer for each argument where
+it gave one. With a hook installed, the first pass does not collect shared
+parameters between arguments of the same custom type, so none of them are
+required to agree with each other. An argument whose own type is not
+already resolved, such as a bare string literal, gets its parameters from
+the hook alone. A parameterized return type's parameters also come from the
+hook, in place of the built-in rule that copies them from an argument.
+
+The [`vsql_tvector`](https://github.com/villagesql/villagesql-server/blob/main/villagesql/examples/vsql-tvector/src/tvector.cc)
+example extension in the server source tree registers such a hook on
+`tvector_concat`:
+
+```cpp
+#include <villagesql/vsql.h>
+
+// Excerpt from villagesql/examples/vsql-tvector/src/tvector.cc. That file
+// also has the standard library includes, the constants kDefaultBytesPerElem
+// (4) and kTVectorMaxDimension (4096), the TVECTOR type, the tvector_concat
+// function body, and the helpers common_element_width() and
+// bind_params_for_vector(), which read an argument's resolved params or count
+// the elements of a constant literal.
+
+struct TVectorParams {
+  int64_t dimension;
+  size_t bytes_per_elem;  // 4 for float, 8 for double
+
+  static TVectorParams parse(const std::map<std::string, std::string> &params) {
+    auto dim_it = params.find("dimension");
+    int64_t dim = strtoll(dim_it->second.c_str(), nullptr, 10);
+    size_t bytes = kDefaultBytesPerElem;
+    auto type_it = params.find("type");
+    if (type_it != params.end() && type_it->second == "double") bytes = 8;
+    return TVectorParams{.dimension = dim, .bytes_per_elem = bytes};
+  }
+
+  // Inverse of parse: render a typed TVectorParams back into the canonical
+  // key/value string form. Used by the SDK when the server needs to publish
+  // inferred params (e.g., from a constant-string from_string) back in the
+  // same shape that parse() consumes.
+  static void to_strings(const TVectorParams &p,
+                         std::map<std::string, std::string> &out) {
+    out["dimension"] = std::to_string(p.dimension);
+    out["type"] = (p.bytes_per_elem == 8) ? "double" : "float";
+  }
+};
+
+// bind_and_check_types for tvector_concat.
+//
+// Two jobs the built-in rules cannot do:
+//   1. permit arguments whose dimensions differ (parameter sharing rejects it);
+//   2. compute the return dimension as M+N (the server return rule only
+//      copies).
+//
+// A third job appears when an argument is a constant: a bare '[1,2,3]' has no
+// type context, and with a hook installed nothing donates params to it, so the
+// hook counts the elements itself and answers with set_arg(). The element type
+// comes from whichever side the server already resolved, which is what the
+// built-in rules would have donated.
+void tvector_concat_bind(vsql::BindArgs args, vsql::BindResult out) {
+  if (args.size() != 2) {
+    out.error("expects 2 arguments");
+    return;
+  }
+
+  std::string error_msg;
+  size_t bpe = 0;
+  if (common_element_width(args, bpe, error_msg)) {
+    out.error(error_msg);
+    return;
+  }
+
+  TVectorParams first{}, second{};
+  bool publish_first = false, publish_second = false;
+
+  if (bind_params_for_vector(args, 0, bpe, first, publish_first, error_msg) ||
+      bind_params_for_vector(args, 1, bpe, second, publish_second, error_msg)) {
+    out.error(error_msg);
+    return;
+  }
+
+  // Hand back the params of whichever argument the server could not resolve.
+  if (publish_first) out.set_arg(0, first);
+  if (publish_second) out.set_arg(1, second);
+
+  const int64_t total = first.dimension + second.dimension;
+  if (total > kTVectorMaxDimension) {
+    out.error("combined dimension " + std::to_string(total) +
+              " exceeds the maximum of " +
+              std::to_string(kTVectorMaxDimension));
+    return;
+  }
+  out.set_return(TVectorParams{.dimension = total, .bytes_per_elem = bpe});
+}
+
+// Registration, inside make_extension():
+// .func(make_func<&tvector_concat>("tvector_concat")
+//     .returns(TVECTOR)
+//     .param(TVECTOR)
+//     .param(TVECTOR)
+//     .bind_and_check_types<&tvector_concat_bind>()
+//     .deterministic()
+//     .build())
+```
+
+The hook lets two vectors of different dimensions combine, and it counts the
+elements of a constant literal. A source build of the server includes
+`vsql_tvector`; the release tarballs do not.
+
+```sql
+INSTALL EXTENSION vsql_tvector;
+CREATE TABLE v2 (v vsql_tvector.TVECTOR(2));
+CREATE TABLE v3 (v vsql_tvector.TVECTOR(3));
+INSERT INTO v2 VALUES ('[1,2]');
+INSERT INTO v3 VALUES ('[3,4,5]');
+
+SELECT vsql_tvector.tvector_concat(v2.v, v3.v) AS c,
+       vsql_tvector.tvector_dim(vsql_tvector.tvector_concat(v2.v, v3.v)) AS dim
+FROM v2, v3;
+```
+
+```text
++-------------+------+
+| c           | dim  |
++-------------+------+
+| [1,2,3,4,5] |    5 |
++-------------+------+
+```
+
+```sql
+SELECT vsql_tvector.tvector_concat(v, '[6,7]') AS c FROM v3;
+```
+
+```text
++-------------+
+| c           |
++-------------+
+| [3,4,5,6,7] |
++-------------+
+```
+
 ## Extension Load and Unload Hooks
 
 An extension sometimes has work to do once per load rather than once per call —
