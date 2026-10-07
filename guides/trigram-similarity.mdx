@@ -17,12 +17,12 @@ MySQL's built-in string functions — `LIKE`, `SOUNDEX`, `LEVENSHTEIN` — cover
 
 ## How trigrams work
 
-A trigram is a group of 3 consecutive characters. `vsql_trgm` lowercases the input, splits it on non-alphanumeric characters, pads each word with two leading spaces and one trailing space, then slides a 3-character window across each padded word. Similarity is how many trigrams the two inputs share, divided by the larger of the two trigram set sizes.
+A trigram is a group of 3 consecutive characters. `vsql_trgm` lowercases the input, splits it on non-alphanumeric characters, pads each word with two leading spaces and one trailing space, then slides a 3-character window across each padded word. Similarity is how many trigrams the two inputs share, divided by the number of distinct trigrams across both — the size of their union, not the size of the larger set.
 
 ```
 "cat" → pad to "  cat " → ["  c", " ca", "cat", "at "]
 "car" → pad to "  car " → ["  c", " ca", "car", "ar "]
-shared: 2 of 4 → similarity 0.5
+shared: 2, union: 4 + 4 − 2 = 6 → similarity 0.333
 ```
 
 Two things to know about multi-word strings: they are **lowercased** before processing, so `"Cat"` and `"cat"` produce the same trigrams. They are also **split on non-alphanumeric characters**, so each word is padded and trigrammed independently — `"hello world"` produces trigrams from `"  hello "` and `"  world "` separately, not from a single padded string. There is no `"o w"` or `" wo"` trigram.
@@ -40,7 +40,7 @@ INSTALL EXTENSION vsql_trgm;
 ### trgm_similarity — continuous score
 
 ```sql
-SELECT vsql_trgm.trgm_similarity('adidas', 'adidos');   -- 0.5714...
+SELECT vsql_trgm.trgm_similarity('adidas', 'adidos');   -- 0.4
 SELECT vsql_trgm.trgm_similarity('cat', 'dog');          -- 0
 SELECT vsql_trgm.trgm_similarity('mysql', 'mysql');      -- 1
 ```
@@ -60,7 +60,7 @@ For a custom threshold:
 
 ```sql
 SELECT vsql_trgm.trgm_similar_threshold('cat', 'car', 0.6);  -- 0
-SELECT vsql_trgm.trgm_similar_threshold('cat', 'car', 0.4);  -- 1
+SELECT vsql_trgm.trgm_similar_threshold('cat', 'car', 0.3);  -- 1
 ```
 
 ### trgm_distance — complement of similarity
@@ -68,7 +68,7 @@ SELECT vsql_trgm.trgm_similar_threshold('cat', 'car', 0.4);  -- 1
 `1 - similarity`. Useful for ORDER BY when you want closest first:
 
 ```sql
-SELECT vsql_trgm.trgm_distance('mysql', 'mysqk');  -- ~0.33
+SELECT vsql_trgm.trgm_distance('mysql', 'mysqk');  -- 0.5
 ```
 
 ## Finding near-matches in a table
