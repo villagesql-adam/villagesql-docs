@@ -46,9 +46,7 @@ If more than one extension registers a function with the same name, the unqualif
 
 ## Custom Type Lookup
 
-Custom types resolve the same way VDF names do: unqualified while that
-resolves to one type, qualified by extension (`extension_name.TYPE_NAME`) to
-pick a specific one.
+You can name a custom type without its extension while only one installed extension provides that type. To use the type from a specific extension, qualify it as extension_name.TYPE_NAME.
 
 If more than one installed extension registers a type with the same name, an
 unqualified reference to it in `CREATE TABLE` or `ALTER TABLE ADD COLUMN` is
