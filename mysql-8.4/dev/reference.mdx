@@ -184,7 +184,7 @@ internal metadata catalog in the same `{codebase}_{version}` format.
 
 ```sql
 SELECT @@villagesql_server_version;
--- Example output: mysql-8.4_0.0.7-dev
+-- Example output: mysql-8.4_0.0.8-dev
 
 -- All VillageSQL system variables at once. Not every one of them starts with
 -- villagesql_, so a LIKE 'villagesql_%' pattern on its own misses some.
@@ -205,7 +205,7 @@ been initialized in this data directory.
 
 ```sql
 SELECT @@villagesql_schema_version;
--- Example output: mysql-8.4_0.0.7-dev
+-- Example output: mysql-8.4_0.0.8-dev
 ```
 
 **Scope:** Global, read-only. Cannot be set at runtime.
@@ -305,7 +305,7 @@ SET PERSIST vsql_allow_preview_extensions = ON;
 
 Use `SET PERSIST`, not `SET GLOBAL`. Preview extensions are loaded at server
 startup, so the value has to survive a restart, and only `SET PERSIST` writes it
-to `mysqld-auto.cnf`; `SET GLOBAL` is rejected for that reason. Before
+to `mysqld-auto.cnf`; `SET GLOBAL` is rejected for that reason.
 To turn it on before the first start, pass `--vsql_allow_preview_extensions=ON` on the `mysqld` command line.
 
 Turning it back off is rejected while any extension using a preview capability
