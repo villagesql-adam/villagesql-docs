@@ -112,7 +112,7 @@ INSTALL EXTENSION name
 Success
 ```
 
-**Rollback:** If any step fails, the extension is not registered and the `.so` is unloaded. The expanded files stay in `.veb_expansion_cache` until the next server restart.
+**Rollback:** If any step fails, the extension is not registered and the `.so` is unloaded. A failure while extracting the `.veb` archive itself — for example a truncated file — discards the partially-expanded files immediately, with no restart needed. A failure at a later step leaves the already-expanded files in `.veb_expansion_cache` until the next server restart.
 
 **Symbol Isolation:** Extensions are loaded with `RTLD_LOCAL` flag, ensuring symbols from one extension don't conflict with symbols from other extensions. This prevents naming collisions when multiple extensions use common library names or function names.
 
