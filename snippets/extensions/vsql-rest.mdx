@@ -60,7 +60,7 @@ it answers arrives over HTTP.
 | Setting | Default | What it controls |
 |---|---|---|
 | `vsql_rest.vsql_rest_enabled` | `OFF` | Whether the listener runs |
-| `vsql_rest.schema` | empty | The database it serves |
+| `vsql_rest.schema` | empty | The database it serves; every table and RPC request gets `503` (code `VSQL0007`) until this is set |
 | `vsql_rest.allowed_tables` | empty | Which tables are reachable; empty means all of them |
 | `vsql_rest.table_methods` | empty | Which HTTP methods each table accepts, written `table:GET,POST\|table2:GET`; empty means `GET`, `POST`, `PATCH` and `DELETE` on every table |
 | `vsql_rest.allowed_routines` | empty | Which functions are callable under `/rpc/`; empty means all of them |
@@ -70,7 +70,7 @@ it answers arrives over HTTP.
 | `vsql_rest.require_auth` | `OFF` | Whether a request must carry a JWT |
 | `vsql_rest.jwt_secret`, `vsql_rest.jwt_public_key` | empty | How that JWT is verified |
 | `vsql_rest.max_rows` | `1000` | How many rows come back when a request carries no `?limit` |
-| `vsql_rest.schema_ttl` | `60` | How long the cached table layout is reused, in seconds |
+| `vsql_rest.schema_ttl` | `60` | How long the cached table layout is reused, in seconds; changing `vsql_rest.schema`, or turning `vsql_rest_enabled` off and on, rebuilds it on the next request |
 
 ## Example
 
@@ -138,4 +138,12 @@ SET GLOBAL vsql_rest.vsql_rest_enabled = OFF;
   A setting written with `SET PERSIST` survives a restart, but
   `UNINSTALL EXTENSION` deletes it. After an uninstall and reinstall every
   setting is back at its default, and no restart brings the old value back.
+</Note>
+
+<Note>
+  Every string setting is read back through the server, which returns at most
+  1022 bytes. A longer `schema`, `allowed_tables`, `allowed_routines`,
+  `table_methods`, `jwt_secret` or `jwt_public_key` makes every request fail
+  with `500`; a longer `ssl_cert` or `ssl_key` keeps the listener from
+  starting.
 </Note>
