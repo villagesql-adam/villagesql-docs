@@ -387,28 +387,6 @@ CREATE TABLE t3 (v vsql_tvector.TVECTOR('dimension=3,dimension=4'));
 -- ERROR 1064 (42000) at line 1: Type 'vsql_tvector.TVECTOR': duplicate parameter 'dimension' near 'vsql_tvector.TVECTOR('dimension=3,dimension=4'))' at line 1
 ```
 
-The string form first converts its literal from the connection's character
-set to UTF-8, so a key or value survives a non-UTF8 connection intact. A key
-or value must still be valid UTF-8 after that, with no embedded NUL byte —
-the extension API passes each one as a NUL-terminated string, so an embedded
-NUL would otherwise truncate it silently. An embedded NUL in the SQL
-string-literal form trips this:
-
-```sql
-CREATE TABLE t4 (v vsql_tvector.TVECTOR('dime\0nsion=8'));
--- ERROR 1064 (42000) at line 1: Type 'vsql_tvector.TVECTOR': embedded NUL in type parameters near 'vsql_tvector.TVECTOR('dime\0nsion=8'))' at line 1
-```
-
-The same check also runs on parameter text that never goes through the
-connection-charset conversion at all — an `int_to_params` or
-`resolve_params` callback can hand back a key or value directly, and that
-text is validated here too.
-
-The "once" rule above also runs on this converted text, comparing names
-using the fixed `utf8mb4_0900_ai_ci` collation (case- and
-accent-insensitive) rather than exact bytes, so `'café=1,cafe=2'` is a
-duplicate too.
-
 ### Rewriting parameters and supplying defaults
 
 `resolve_params` has a second, mutating overload, declared only in the opt-in dev ABI
