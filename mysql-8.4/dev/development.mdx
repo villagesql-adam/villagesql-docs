@@ -227,8 +227,12 @@ sizing rules and cap.
 
 Some VDFs need state that spans every row a single query touches — a call
 counter, a cached result, an open resource. Allocate it in a **prerun** hook,
-access it from the VDF body, and release it in a **postrun** hook. Both hooks
-run once per statement; the VDF body runs once per row.
+access it from the VDF body, and release it in a **postrun** hook. Prerun
+runs once per statement, before the first row; postrun runs once per
+statement, after the last one, including when the statement fails before the
+first row — provided prerun itself succeeded. If prerun reports an error
+with `PrerunResult::error()`, postrun does not run at all, so free anything
+prerun already allocated before calling `error()`.
 
 Register them with `.prerun<&Hook>()` and `.postrun<&Hook>()`. The required
 signatures are:
