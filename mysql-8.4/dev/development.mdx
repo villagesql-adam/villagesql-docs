@@ -453,6 +453,20 @@ as a bare string literal, gets its parameters from the hook alone. A
 parameterized return type's parameters also come from the hook, in place of
 the built-in rule that copies them from an argument.
 
+A prepared-statement parameter has no value until `EXECUTE`, so a hook never
+sees one as a constant, even in a position where a literal would work:
+
+```sql
+INSTALL EXTENSION vsql_tvector;
+PREPARE s FROM 'SELECT vsql_tvector.tvector_dim(?)';
+```
+
+```text
+ERROR 3219 (HY000): Cannot initialize function 'tvector_dim': argument 1 must be a TVECTOR or a constant vector literal
+```
+
+The statement fails at `PREPARE` time, before any value is bound.
+
 The [`vsql_tvector`](https://github.com/villagesql/villagesql-server/blob/main/villagesql/examples/vsql-tvector/src/tvector.cc)
 example extension in the server source tree registers such a hook on
 `tvector_concat`:
@@ -472,8 +486,12 @@ struct TVectorParams {
   size_t bytes_per_elem;  // 4 for float, 8 for double
 
   static TVectorParams parse(const std::map<std::string, std::string> &params) {
+    // Params that were never resolved may lack a dimension; 0 makes encode
+    // and decode fail cleanly.
     auto dim_it = params.find("dimension");
-    int64_t dim = strtoll(dim_it->second.c_str(), nullptr, 10);
+    int64_t dim = dim_it == params.end()
+                      ? 0
+                      : strtoll(dim_it->second.c_str(), nullptr, 10);
     size_t bytes = kDefaultBytesPerElem;
     auto type_it = params.find("type");
     if (type_it != params.end() && type_it->second == "double") bytes = 8;
