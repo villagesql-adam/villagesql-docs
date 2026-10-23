@@ -48,7 +48,12 @@ To build it yourself, follow the build instructions in the
 
 Every request function returns one JSON object with four fields: `status`,
 `content_type`, `headers`, and `content`. A request that cannot complete, such as
-a refused connection or a timeout, returns `NULL`.
+a refused connection or a timeout, returns `NULL` and raises a warning carrying
+curl's error message:
+
+```
+Warning 3200 VDF error in function 'http_get': Couldn't connect to server
+```
 
 | Function | Returns | What it does |
 |---|---|---|
@@ -60,6 +65,10 @@ a refused connection or a timeout, returns `NULL`.
 | `http_request(method, url, headers, body, content_type, options)` | text | Any method, with your own headers and options as JSON |
 | `url_encode(s)` | text | Percent-encodes a string for use in a URL |
 | `url_decode(s)` | text | Reverses `url_encode` |
+
+`http_request`'s `method` argument matches GET, HEAD, POST, PUT, DELETE, CONNECT,
+OPTIONS, TRACE and PATCH case-insensitively and sends them in uppercase; any
+other method is sent exactly as given.
 
 ## Example
 

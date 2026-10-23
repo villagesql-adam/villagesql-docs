@@ -124,7 +124,10 @@ The `headers_json` argument is a JSON object where keys are header names and val
 | `url_encode(text)` | Percent-encode a string |
 | `url_decode(text)` | Decode a percent-encoded string |
 
-All functions return NULL on connection failure or NULL input.
+All functions return NULL for NULL input. On connection failure (refused
+connection, DNS failure, timeout), the HTTP functions also return NULL and
+raise a warning carrying curl's error message — check it with `SHOW WARNINGS`
+when a request seems to disappear.
 
 ## URL Encoding
 
@@ -158,7 +161,7 @@ SELECT JSON_UNQUOTE(JSON_EXTRACT(@resp, '$.content')) AS body;
 | Problem | Solution |
 |:---|:---|
 | `FUNCTION <database>.http_get does not exist` | Run `INSTALL EXTENSION vsql_http` |
-| Returns NULL | Connection failed or NULL input — verify the URL and check network access from the server host |
+| Returns NULL | Connection failed or NULL input — check `SHOW WARNINGS` for curl's error message, verify the URL, and check network access from the server host |
 | `JSON_VALUE` returns NULL | Response body too large — use `JSON_UNQUOTE(JSON_EXTRACT(...))` |
 | Garbled JSON parsing | Forgot `CONVERT(... USING utf8mb4)` — wrap the function call |
 | Query times out | Set a `{"timeout": N}` option on the request itself — `max_execution_time` has no effect on a blocking `vsql_http` call |

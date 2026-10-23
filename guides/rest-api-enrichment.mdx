@@ -119,7 +119,7 @@ Note `url_encode()` wrapping the address — always encode user data before embe
 
 ## Handling API Errors
 
-All `vsql_http` functions return NULL on connection failure. Check the status code before using the content:
+All `vsql_http` functions return NULL on connection failure, with a warning carrying curl's error message. Check the status code before using the content:
 
 ```sql
 SET @resp = CONVERT(
@@ -164,7 +164,7 @@ Prefer storing results over querying live — once a value is in a column, subse
 | Problem | Solution |
 |:---|:---|
 | UPDATE runs too long | Reduce `LIMIT`; `max_execution_time` does not apply to `UPDATE`, use `KILL QUERY <connection_id>` from another session instead |
-| Returns NULL for all rows | API unreachable from server host; verify network access |
+| Returns NULL for all rows | API unreachable from server host; check `SHOW WARNINGS` for curl's error message, and verify network access |
 | JSON extraction returns NULL | `content` is a JSON-encoded string, not a nested object, so a single-step `'$.content.field'` path never resolves. Unquote it first — `JSON_UNQUOTE(JSON_EXTRACT(resp, '$.content'))` — then extract fields from that. This is independent of response size |
 | URL parameters not encoding correctly | Wrap values with `vsql_http.url_encode()` |
 | Rate limit errors from API | Reduce LIMIT per batch; add `SELECT SLEEP(1)` between batches |
