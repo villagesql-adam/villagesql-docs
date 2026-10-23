@@ -1,16 +1,7 @@
 # GitHub usernames of people who may apply /lgtm
 reviewers:
-  - villagesql-adam
-  - villagedominic
-  - villagestevers
-  - malone-at-work
-  - tomas-villagesql
-  - leeca-vsql
-  - robgolebiowski-vsql
-  - katcosgrove
+  - '@villagesql/villagesql-team'
 
 # GitHub usernames of people who may apply /approve
 approvers:
-  - villagesql-adam
-  - villagedominic
-  - villagestevers
+  - '@villagesql/villagesql-docs-approvers'
