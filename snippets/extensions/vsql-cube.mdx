@@ -92,7 +92,7 @@ INSERT INTO sensors VALUES
 | `cube_union(a, b)`, `cube_inter(a, b)` | `cube` | Smallest box holding both; their intersection |
 | `cube_enlarge(c, r, n)` | `cube` | Grows a value by `r` in the first `n` dimensions |
 | `cube_subset(c, d1, d2, ...)` | `cube` | A new value from the listed dimensions, counting from 1 |
-| `cube_add_dim(c, lower, upper)` | `cube` | Appends a dimension, as long as the result stays within the dimension count of the column `c` came from |
+| `cube_add_dim(c, lo, hi, ...)` | `cube` | Appends one dimension per lo/hi pair; the result must still fit within the dimension count of the column `c` came from |
 | `cube_agg(c)` | `cube` | Aggregate: the bounding box of every value in the group |
 | `cube_scalar_agg(x)` | `cube` | Aggregate: the bounding range of a numeric column |
 
