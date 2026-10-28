@@ -1412,6 +1412,7 @@ POSTEXECUTE phase every field is populated. Selected accessors:
 | `user()`, `client_ip()`, `connection_id()` | Connection identity. |
 | `schema()` | Default schema, or `NULL` if none is selected. |
 | `status()` | `0` on success, otherwise the MySQL error code. |
+| `warning_count()` | Number of conditions — notes, warnings, and errors — raised while the statement ran, minus one when the statement itself failed. |
 | `digest_text()` | Normalized query form, for grouping similar queries. |
 | `no_index_used()` | `true` when the query ran without a usable index. |
 | `digest_hash()` | Statement digest as 64 lowercase hex characters — the value `performance_schema` exposes as `DIGEST`. A compact key for grouping identical statements; `NULL` whenever `digest_text()` is. |
