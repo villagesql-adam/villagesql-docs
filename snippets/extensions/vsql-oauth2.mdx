@@ -133,3 +133,9 @@ ES384, and ES512.
   `UNINSTALL EXTENSION` deletes it. After an uninstall and reinstall every
   setting is back at its default, and no restart brings the old value back.
 </Note>
+
+## Status variables
+
+| Variable | Description |
+|----------|-------------|
+| `vsql_oauth2.jwks_fetch_failures` | Logins that failed because the JWKS fetch failed and no cached keys were left to use. A failed refresh that falls back to cached keys does not count. |
