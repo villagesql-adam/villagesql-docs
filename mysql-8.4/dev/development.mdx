@@ -467,6 +467,23 @@ ERROR 3219 (HY000): Cannot initialize function 'tvector_dim': argument 1 must be
 
 The statement fails at `PREPARE` time, before any value is bound.
 
+A hook reads a string constant through `const_value()`, in the charset of the
+parameter that the constant is passed to. A varargs call has no parameters, so
+its hook reads every string constant as utf8mb4 text, even a constant that the
+hook then names as a custom type. A constant that is not valid utf8mb4 stops
+the statement before the hook runs:
+
+```sql
+SELECT vsql_tvector.tvector_concat_all(_binary 0xFF);
+```
+
+```text
+ERROR 3854 (HY000): Cannot convert string '\xFF' from binary to utf8mb4
+```
+
+A fixed-arity function's hook reads a constant that is passed to a custom-type
+parameter as the bytes that the caller wrote.
+
 The [`vsql_tvector`](https://github.com/villagesql/villagesql-server/blob/main/villagesql/examples/vsql-tvector/src/tvector.cc)
 example extension in the server source tree registers such a hook on
 `tvector_concat`:
